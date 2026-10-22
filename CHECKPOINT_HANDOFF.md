@@ -142,6 +142,8 @@ verified, with each tool's own command where one exists (`avdmanager delete avd`
 ## Continuation state
 
 - Local checkout is on `apex/upstream-sync` or `apex/byo-llm`; both pushed. No stashes needed.
-- Next: once the scope is granted, `gh codespace create -R ApexAiOfficial/ytdlnis -b apex/byo-llm -m <machine> --idle-timeout 30m`,
-  wait for the devcontainer, run the build + unit tests over `gh codespace ssh`, record the
-  result here, then reclaim the local tooling listed above.
+- 2026-10-21 21:46 EDT: owner granted the `codespace` scope. Codespace
+  `ytdlnis-build-v674p6wwgv9vh6xj9` (4-core, 16 GB, 32 GB; `apex/byo-llm`; idle timeout 30 min;
+  auto-deleted after 7 days stopped) was created and is provisioning.
+- Next: when it is `Available`, run the build + unit tests over `gh codespace ssh`, record
+  the result here, then reclaim the local tooling listed above.
