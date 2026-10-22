@@ -1,11 +1,9 @@
-# Fork CI for ApexAiOfficial/ytdlnis: builds, unit tests and an emulator smoke test run here
-# instead of on a developer laptop. Upstream's android.yml (release builds) is left unchanged.
+# Fork CI for ApexAiOfficial/ytdlnis: unit tests, debug APKs and an emulator smoke test (the one
+# place with KVM; Codespaces has none). Manual only, so it never spends Actions minutes on its own;
+# day-to-day builds run in a Codespace. Upstream's android.yml (release builds) is left unchanged.
 name: Apex CI
 
 on:
-  push:
-    branches:
-      - "apex/**"
   workflow_dispatch:
 
 permissions:
