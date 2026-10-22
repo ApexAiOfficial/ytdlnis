@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
@@ -104,6 +105,8 @@ object LlmProviderDialog {
         fun showStatus(text: String, isError: Boolean) {
             status.isVisible = true
             status.text = text
+            // the status sits below the form; bring it into view above the dialog buttons
+            (view as? ScrollView)?.let { scroll -> scroll.post { scroll.smoothScrollTo(0, status.bottom) } }
             status.setTextColor(
                 MaterialColors.getColor(
                     status,
