@@ -1,0 +1,113 @@
+# Fork CI for ApexAiOfficial/ytdlnis: builds, unit tests and an emulator smoke test run here
+# instead of on a developer laptop. Upstream's android.yml (release builds) is left unchanged.
+name: Apex CI
+
+on:
+  push:
+    branches:
+      - "apex/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apex-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      HAS_LLM_KEY: ${{ secrets.DEEPSEEK_API_KEY != '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: 17
+          distribution: temurin
+          cache: gradle
+
+      - name: Unit tests and debug APK
+        run: bash ./gradlew testGithubDebugUnitTest assembleGithubDebug --no-daemon --console=plain
+
+      # Optional: only when the repository has a DEEPSEEK_API_KEY secret. The key is written to a
+      # private temp file because the test reads it from a path, never from the command line.
+      - name: Live LLM provider test
+        if: env.HAS_LLM_KEY == 'true' && hashFiles('app/src/test/java/com/deniscerri/ytdl/core/llm/LiveProviderTest.kt') != ''
+        env:
+          LLM_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          umask 077
+          keyfile="$RUNNER_TEMP/llm.key"
+          printf '%s' "$LLM_KEY" > "$keyfile"
+          status=0
+          YTDLNIS_LLM_KEY_FILE="$keyfile" YTDLNIS_LLM_PRESET=DEEPSEEK \
+            bash ./gradlew testGithubDebugUnitTest --tests '*LiveProviderTest*' --rerun --no-daemon --console=plain || status=$?
+          rm -f "$keyfile"
+          sed -n '/<system-out>/,/<\/system-out>/p' app/build/test-results/testGithubDebugUnitTest/TEST-*LiveProviderTest.xml || true
+          exit $status
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports
+          path: app/build/reports/tests/
+          retention-days: 7
+
+      - name: Upload emulator APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apk-x86_64
+          path: app/build/outputs/apk/github/debug/*x86_64-debug-github.apk
+          retention-days: 7
+
+      - name: Upload phone APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ytdlnis-debug-arm64-v8a
+          path: app/build/outputs/apk/github/debug/*arm64-v8a-debug-github.apk
+          retention-days: 14
+
+  emulator-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: apk-x86_64
+          path: apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Smoke test on an Android 14 emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: bash .github/scripts/emulator-smoke.sh apk smoke-output
+
+      - name: Upload smoke test output
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: emulator-smoke-output
+          path: smoke-output/
+          retention-days: 7
