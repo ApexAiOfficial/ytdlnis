@@ -16,9 +16,14 @@ resume (usage reset, compaction, new session). Newest status is at the top of ea
 
 ## Current status
 
-- **Phase:** 1 (baseline) — in progress.
-- **Branch:** `apex/upstream-sync` (local only, not pushed — see "Decisions").
-- **Last verified:** nothing yet.
+- **Phase:** 1 (baseline) — done and verified; Phase 2 starting on `apex/byo-llm`.
+- **Branches (local only, not pushed — see "Decisions"):**
+  - `apex/upstream-sync` = `upstream/main` (9a529f85) + 2 fork commits (CI signing
+    fallback, terminal ANR fix).
+  - `apex/byo-llm` — Phase 2, stacked on `apex/upstream-sync`.
+- **Last verified (2026-10-21):** `assembleGithubDebug` OK; `testGithubDebugUnitTest` OK;
+  APK installed on an API 34 x86_64 emulator, app launches, terminal starts bundled bash,
+  `yt-dlp --version` → `2026.08.19`.
 
 ## Repository facts (assessed 2026-10-21)
 
@@ -78,12 +83,29 @@ Stop the daemon when finished (`bash ./gradlew --stop`).
 
 1. [x] Add `upstream` remote, assess divergence.
 2. [x] Branch `apex/upstream-sync` at `upstream/main` (fast-forward of fork `main`).
-3. [ ] First local build of `githubDebug`; fix compatibility issues.
-4. [ ] Unit tests (`testGithubDebugUnitTest`).
-5. [ ] Verify the APK: `aapt2 dump badging`, install and smoke-test on an emulator
-   (KVM is available) — launch, open terminal, run `yt-dlp --version`.
-6. [ ] Make fork CI usable without upstream's signing secrets (fall back to debug signing,
-   skip Telegram notify when its secret is absent) while keeping upstream behaviour.
+3. [x] First local build of `githubDebug`: **succeeded with no code changes** (32 min
+   cold). No compatibility fixes were needed for the toolchain itself.
+4. [x] Unit tests (`testGithubDebugUnitTest`): pass (upstream has only the example test).
+5. [x] APK verified: `aapt2 dump badging` → `com.deniscerri.ytdl` 1.9.1.1 (versionCode
+   109010100), min 24 / target 36, ABIs arm64-v8a, armeabi-v7a, x86, x86_64; debug-signed.
+   Emulator smoke test as above.
+6. [x] Fork CI: `app/build.gradle` now trims `keystore.properties` before deciding to use
+   it, so the blank file CI writes without secrets falls back to debug signing (verified:
+   Gradle configures with a blank file). The Telegram notify job already has
+   `continue-on-error`.
+7. [x] **Found and fixed an upstream ANR:** opening the terminal before the first-launch
+   runtime unpack finished blocked the main thread in `RuntimeManager.assertInit()`
+   (ANR trace: "Input dispatching timed out … RuntimeManager.assertInit"). The wait now
+   runs on `Dispatchers.IO` (commit 093d89e1). Verified: no app ANR, terminal UI renders
+   while unpacking; warm start opens the shell in ~15 s on the emulator. The cold path with
+   the longer wait is re-verified with the Phase 2 APK (same code).
+
+Emulator notes: `~/.android/avd/ytdlnis34.avd` (API 34 default x86_64, 2 GB). Start
+headless with `emulator -avd ytdlnis34 -no-window -no-audio -no-boot-anim -no-snapshot
+-gpu swiftshader_indirect -memory 2048 -cores 2`. **Gradle and the emulator cannot run at
+the same time on this laptop** (swap exhausts; the watchdog kills Gradle) — stop the
+emulator (`adb emu kill`) before building. Its System UI/launcher ANRs under load are
+emulator artefacts; `adb shell settings put global hide_error_dialogs 1` hides them.
 
 ## Phase 2 design (draft — refined after Phase 1)
 
@@ -131,11 +153,11 @@ Planned architecture (package `com.deniscerri.ytdl.llm`):
 
 ## Continuation state
 
-- First `assembleGithubDebug` build running (cold cache: ~25+ min on this laptop, heavy
-  swapping during D8 dex merge; later builds are incremental). A memory watchdog
-  (scratchpad `memguard.sh`) kills Gradle if MemAvailable+SwapFree < 600 MB so the OOM killer
-  never hits the comms-bot/Hermes services.
-- Emulator + `system-images;android-34;default;x86_64` installed for the smoke test.
-- Phase 2 code is drafted outside the repo (session scratchpad `p2/`) so it cannot affect
-  Phase 1 validation; it is copied in on the Phase 2 branch. If the scratchpad is lost, the
-  design above is enough to rewrite it.
+- Phase 2 drafts (provider layer, settings page, terminal sheet, tests, docs) are in
+  `git stash` entry "phase2-drafts" (made on `apex/byo-llm`) and in the session scratchpad
+  `p2/`. Next: `git checkout apex/byo-llm && git rebase apex/upstream-sync && git stash pop`,
+  then wire them in (strings, terminal menu + TerminalFragment, settings nav/registry,
+  SettingsActivity deep link), build, run unit tests, emulator test.
+- Builds: incremental ~6–7 min. A memory watchdog (scratchpad `memguard.sh`) kills Gradle
+  if MemAvailable+SwapFree < 600 MB so the OOM killer never hits the comms-bot/Hermes
+  services.
