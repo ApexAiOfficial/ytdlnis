@@ -1,0 +1,22 @@
+{
+  // Codespace / dev container for building YTDLnis off the development laptop.
+  // JDK 17 comes from the image; the Android SDK is installed by install-android-sdk.sh.
+  // There is no KVM in Codespaces, so no emulator: install the built APK on a phone instead.
+  "name": "YTDLnis Android",
+  "image": "mcr.microsoft.com/devcontainers/java:3-17-bookworm",
+  "features": {
+    // lets `gh codespace ssh` run builds remotely
+    "ghcr.io/devcontainers/features/sshd:1": {}
+  },
+  "containerEnv": {
+    "ANDROID_HOME": "/home/vscode/android-sdk",
+    "ANDROID_SDK_ROOT": "/home/vscode/android-sdk"
+  },
+  "remoteUser": "vscode",
+  "postCreateCommand": "bash .devcontainer/install-android-sdk.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["fwcd.kotlin", "vscjava.vscode-gradle"]
+    }
+  }
+}
