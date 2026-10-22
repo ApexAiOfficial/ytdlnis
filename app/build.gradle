@@ -30,7 +30,8 @@ android {
 
     try {
         def propertiesFile = rootProject.file("keystore.properties")
-        if(propertiesFile.text != ""){
+        // trim: CI writes a lone newline when the signing secrets are absent (e.g. on forks)
+        if(propertiesFile.text.trim() != ""){
             properties.load(new FileInputStream(propertiesFile))
 
             properties.load(new FileInputStream(propertiesFile))
