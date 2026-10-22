@@ -52,6 +52,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:maxLines="1"
+                android:paddingHorizontal="4dp"
                 android:text="@string/ai_mode_generate" />
 
             <Button
@@ -61,6 +62,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:maxLines="1"
+                android:paddingHorizontal="4dp"
                 android:text="@string/ai_mode_explain" />
 
             <Button
@@ -70,6 +72,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:maxLines="1"
+                android:paddingHorizontal="4dp"
                 android:text="@string/ai_mode_troubleshoot" />
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
@@ -127,6 +130,7 @@
 
             <Button
                 android:id="@+id/ask"
+                style="@style/Widget.Material3.Button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/ai_ask" />
@@ -224,6 +228,7 @@
 
                 <Button
                     android:id="@+id/run"
+                    style="@style/Widget.Material3.Button"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/ai_run" />
