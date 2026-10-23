@@ -4,6 +4,46 @@ Living handoff for the two-phase revival of the ApexAiOfficial fork of
 [deniscerri/ytdlnis](https://github.com/deniscerri/ytdlnis). Read this first after any
 resume (usage reset, compaction, new session).
 
+## Retired (2026-10-23)
+
+The project was retired by the owner. Valuable work was contributed upstream to
+`deniscerri/ytdlnis` and all local Android tooling was removed.
+
+| Upstream | What | State |
+|---|---|---|
+| [#1444](https://github.com/deniscerri/ytdlnis/issues/1444) | Bug report: terminal ANR while the runtime unpacks | open |
+| [#1445](https://github.com/deniscerri/ytdlnis/pull/1445) | Fix for #1444 (`fix/terminal-first-launch-anr`, 1 commit, `TerminalFragment` only) | open, ready for review |
+| [#1446](https://github.com/deniscerri/ytdlnis/issues/1446) | Feature request: optional BYO-LLM terminal assistant | open |
+| [#1447](https://github.com/deniscerri/ytdlnis/pull/1447) | Assistant (`feature/terminal-llm-assistant`, 1 commit, 30 files) | **draft**: UI success path not verified on a device |
+
+- Both PR branches are based on upstream `main` 8fd423f1 and contain no ApexAI-specific
+  files (no handoff, devcontainer or fork CI). Verified in a Codespace before submitting:
+  `assembleGithubDebug` + `testGithubDebugUnitTest` pass on both. The assistant's 33
+  `core/llm` unit tests pass, and `LiveProviderTest` passed 3/3 against DeepSeek
+  (`deepseek-flash`).
+- A security review before submission added: no HTTP redirects (a redirect could forward
+  `x-api-key` to another host), a response-size cap, `llm_secrets.xml` excluded from cloud
+  backup and device transfer, and `--ppa`/`--downloader-args` flagged as risky.
+- Not submitted: the fork-only CI signing fallback (`app/build.gradle` trim), which matters
+  only to forks without upstream's secrets.
+- Preserved on the fork: `apex/upstream-sync`, `apex/byo-llm` (this branch, full history),
+  and the two PR branches. Fork `main` untouched. The fork is kept.
+- Codespace `ytdlnis-build-v674p6wwgv9vh6xj9` was deleted after checking it had no
+  uncommitted, stashed or unpushed work. The `DEEPSEEK_API_KEY` Codespaces secret was
+  deleted (the fork now has no secrets).
+- Local cleanup with each tool's own commands first (`gradlew clean`,
+  `avdmanager delete avd`, `sdkmanager --uninstall` for the system image, emulator,
+  platform, build-tools, platform-tools and cmdline-tools). Then the leftovers with no
+  uninstaller were removed: `~/.local/opt/{android-sdk,jdk-17}`, `~/.gradle`, `~/.android`,
+  `~/.java`, `~/.emulator_console_auth_token`, and the repo's `build/`, `.gradle/` and
+  `local.properties`. All were created by this project on 2026-10-21 and referenced by
+  nothing else (shell profiles, systemd units, crontab, agent configs, other repositories
+  and workflows were checked). Free space went from 6.2 GB to 14 GB (8.10 GB recovered).
+- To work on the PRs again: create a Codespace from `apex/byo-llm` (its devcontainer needs
+  the SDK license hash copied in, or `sdkmanager --licenses` run interactively, because
+  current cmdline-tools skip `--licenses`) or install JDK 17 + the SDK locally as described
+  below.
+
 ## Goal
 
 1. **Phase 1 — baseline.** Bring the fork up to current upstream, fix compatibility
